@@ -1,6 +1,8 @@
 const express = require('express');
 const cors = require('cors');
-const ytdl = require('@distube/ytdl-core');
+const YTDlpWrap = require('yt-dlp-wrap').default;
+const path = require('path');
+const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -9,10 +11,30 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 
+// Define o caminho do binário do yt-dlp dependendo se está na nuvem ou PC
+const binPath = path.join(__dirname, 'yt-dlp');
+let ytDlp;
+
+(async () => {
+    try {
+        if (!fs.existsSync(binPath)) {
+            console.log('Baixando o binário do yt-dlp para o servidor...');
+            await YTDlpWrap.downloadFromGithub(binPath);
+            if (process.platform !== 'win32') {
+                fs.chmodSync(binPath, '755');
+            }
+        }
+        ytDlp = new YTDlpWrap(binPath);
+        console.log('yt-dlp pronto para uso!');
+    } catch (error) {
+        console.error('Erro ao configurar yt-dlp:', error);
+    }
+})();
+
 app.get('/download', async (req, res) => {
     const videoURL = req.query.url;
 
-    if (!videoURL || !ytdl.validateURL(videoURL)) {
+    if (!videoURL) {
         return res.status(400).send('Link inválido.');
     }
 
@@ -20,14 +42,19 @@ app.get('/download', async (req, res) => {
         res.setHeader('Content-Type', 'audio/mpeg');
         res.setHeader('Content-Disposition', 'attachment; filename="audio.mp3"');
 
-        const stream = ytdl(videoURL, {
-            quality: 'highestaudio',
-            filter: 'audioonly'
-        });
+        if (!ytDlp) {
+            return res.status(500).send('Servidor ainda inicializando o conversor, tente novamente em alguns segundos.');
+        }
 
-        stream.pipe(res);
+        const ytDlpStream = ytDlp.execStream([
+            '-x', '--audio-format', 'mp3',
+            '-o', '-',
+            videoURL
+        ]);
 
-        stream.on('error', (err) => {
+        ytDlpStream.pipe(res);
+
+        ytDlpStream.on('error', (err) => {
             console.error('Erro no stream:', err);
             if (!res.headersSent) {
                 res.status(500).send('Erro ao processar o áudio.');
