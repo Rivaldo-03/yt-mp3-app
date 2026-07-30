@@ -8,6 +8,6 @@
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.19.2",
-    "yt-dlp-wrap": "^2.3.9"
+    "ytdl-core": "github:distubejs/ytdl-core"
   }
 }

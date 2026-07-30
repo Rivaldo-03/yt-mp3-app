@@ -1,8 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const YTDlpWrap = require('yt-dlp-wrap').default;
-const path = require('path');
-const fs = require('fs');
+const ytdl = require('@distube/ytdl-core');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -11,59 +9,39 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 
-// Usa uma pasta temporária com permissão no Render
-const binPath = path.join('/tmp', 'yt-dlp');
-let ytDlp;
-
-(async () => {
-    try {
-        if (!fs.existsSync(binPath)) {
-            console.log('Baixando o binário do yt-dlp para a nuvem...');
-            await YTDlpWrap.downloadFromGithub(binPath);
-            fs.chmodSync(binPath, '755');
-        }
-        ytDlp = new YTDlpWrap(binPath);
-        console.log('yt-dlp pronto para uso na nuvem!');
-    } catch (error) {
-        console.error('Erro ao configurar yt-dlp:', error);
-    }
-})();
-
 app.get('/download', async (req, res) => {
     const videoURL = req.query.url;
 
-    if (!videoURL) {
-        return res.status(400).send('Link inválido.');
+    if (!videoURL || !ytdl.validateURL(videoURL)) {
+        return res.status(400).send('Link de vídeo inválido.');
     }
 
     try {
+        const info = await ytdl.getInfo(videoURL);
+        const title = info.videoDetails.title.replace(/[^\w\s]/gi, '').trim() || 'audio';
+
         res.setHeader('Content-Type', 'audio/mpeg');
-        res.setHeader('Content-Disposition', 'attachment; filename="audio.mp3"');
+        res.setHeader('Content-Disposition', `attachment; filename="${title}.mp3"`);
 
-        if (!ytDlp) {
-            return res.status(500).send('O servidor ainda está inicializando o conversor, aguarde alguns segundos.');
-        }
+        const stream = ytdl(videoURL, {
+            quality: 'highestaudio',
+            filter: 'audioonly',
+            highWaterMark: 1 << 25
+        });
 
-        const ytDlpStream = ytDlp.execStream([
-            '-x', '--audio-format', 'mp3',
-            '--extract-audio',
-            '-o', '-',
-            videoURL
-        ]);
+        stream.pipe(res);
 
-        ytDlpStream.pipe(res);
-
-        ytDlpStream.on('error', (err) => {
-            console.error('Erro no stream:', err);
+        stream.on('error', (err) => {
+            console.error('Erro no stream de áudio:', err);
             if (!res.headersSent) {
-                res.status(500).send('Erro ao processar o áudio.');
+                res.status(500).send('Erro ao transmitir o áudio.');
             }
         });
 
     } catch (error) {
-        console.error('Erro:', error);
+        console.error('Erro interno:', error);
         if (!res.headersSent) {
-            res.status(500).send('Erro interno no servidor.');
+            res.status(500).send('Erro ao processar o vídeo no servidor.');
         }
     }
 });
