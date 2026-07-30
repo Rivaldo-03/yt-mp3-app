@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const ytdl = require('@distube/ytdl-core');
+const ytdl = require('ytdl-core');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -13,7 +13,7 @@ app.get('/download', async (req, res) => {
     const videoURL = req.query.url;
 
     if (!videoURL || !ytdl.validateURL(videoURL)) {
-        return res.status(400).send('Link de vídeo inválido.');
+        return res.status(400).send('Link inválido.');
     }
 
     try {
@@ -23,25 +23,15 @@ app.get('/download', async (req, res) => {
         res.setHeader('Content-Type', 'audio/mpeg');
         res.setHeader('Content-Disposition', `attachment; filename="${title}.mp3"`);
 
-        const stream = ytdl(videoURL, {
+        ytdl(videoURL, {
             quality: 'highestaudio',
-            filter: 'audioonly',
-            highWaterMark: 1 << 25
-        });
-
-        stream.pipe(res);
-
-        stream.on('error', (err) => {
-            console.error('Erro no stream de áudio:', err);
-            if (!res.headersSent) {
-                res.status(500).send('Erro ao transmitir o áudio.');
-            }
-        });
+            filter: 'audioonly'
+        }).pipe(res);
 
     } catch (error) {
-        console.error('Erro interno:', error);
+        console.error('Erro:', error);
         if (!res.headersSent) {
-            res.status(500).send('Erro ao processar o vídeo no servidor.');
+            res.status(500).send('Erro ao processar o áudio.');
         }
     }
 });
