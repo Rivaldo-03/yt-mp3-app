@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: yt-mp3-app
+    env: node
+    buildCommand: apt-get update && apt-get install -y python3 ffmpeg && npm install
+    startCommand: node server.js
+    plan: free
