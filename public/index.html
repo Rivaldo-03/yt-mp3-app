@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube MP3 Downloader</title>
+    <style>
+        body {
+            background-color: #121212;
+            color: #fff;
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .card {
+            background: #1e1e1e;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            margin: 15px 0;
+            background: #2d2d2d;
+            border: 1px solid #444;
+            color: #fff;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #ff0033;
+            border: none;
+            color: white;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #e0002d;
+        }
+        #status {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #aaa;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h2>Baixar MP3 Real</h2>
+        <input type="text" id="url" placeholder="Cole o link do YouTube...">
+        <button onclick="baixar()">Baixar Áudio</button>
+        <div id="status"></div>
+    </div>
+
+    <script>
+        function baixar() {
+            const url = document.getElementById('url').value.trim();
+            const status = document.getElementById('status');
+
+            if (!url) {
+                status.innerText = 'Cole um link primeiro!';
+                return;
+            }
+
+            status.innerText = 'Baixando áudio, aguarde...';
+            window.location.href = `/download?url=${encodeURIComponent(url)}`;
+            
+            setTimeout(() => {
+                status.innerText = 'Download iniciado!';
+            }, 3000);
+        }
+    </script>
+
+</body>
+</html>
